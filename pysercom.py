@@ -50,6 +50,8 @@ class Application(Frame):
             "stop" : 1,
         }
 
+        self.default_filename = "hkc_sn_mac"
+
         self.uart_open = False
 
         self.createWidgets(main_frame)
@@ -71,6 +73,7 @@ class Application(Frame):
             "sn" : "",
             "mac" : "",
         }
+        
 
     def scan_available_ports(self):
         """ Lists serial port names
@@ -246,14 +249,20 @@ class Application(Frame):
         message_string = ""
 
         if not self.directory_path:
-            message_string = "Load directory path first!"
-            tk.messagebox.showerror(title="Error", message=message_string)
-            return
+            # message_string = "Load directory path first!"
+            # tk.messagebox.showerror(title="Error", message=message_string)
+            # use directory data
+            if not os.path.isdir("data"):
+                os.mkdir("data")
+            self.output_file = "data" + "/" + self.default_filename + ".txt"
+        else :
+            print("self directory : {}".format(self.directory_path))
+            self.output_file = self.directory_path + "/" + self.default_filename + ".txt"
 
-        if self.eFIlename.get() == "Masukkan nama file.." or self.eFIlename.get() == '':
-            message_string = "Set filename first!"
-            tk.messagebox.showerror(title="Error", message=message_string)
-            return
+        # if self.eFIlename.get() == "Masukkan nama file.." or self.eFIlename.get() == '':
+        #     message_string = "Set filename first!"
+        #     tk.messagebox.showerror(title="Error", message=message_string)
+        #     return
 
         # check serial com
         if not self.ser.isOpen():
@@ -290,7 +299,8 @@ class Application(Frame):
 
         self.write_to_textbox(self.data_query['sn'] + "\n")
 
-        self.output_file = self.directory_path + "/" + self.eFIlename.get() + ".txt"
+        print("directory output : {}".format(self.output_file))
+        
         # try to create file
         try:
             out_file = open(self.output_file, 'a')
@@ -330,7 +340,7 @@ class Application(Frame):
         self.bBrowseFile["command"] = self.get_directory_path
 
         # dir
-        self.lblDirectoryPath = Label(self.frame1, text="None", width=30, font=smallLabel, anchor="w")
+        self.lblDirectoryPath = Label(self.frame1, text="data", width=30, font=smallLabel, anchor="w")
         self.lblDirectoryPath.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
 
         self.row_count = 1
@@ -345,12 +355,13 @@ class Application(Frame):
         self.lblFileName.grid(row=self.row_count, column=0, sticky=W+E, columnspan=4, pady=3)
 
         
-        self.initial_string_value_filename = "Masukkan nama file.."
+        self.initial_string_value_filename = self.default_filename
         self.eFIlename = StringVar(value='')
         self.eFilenameText = Entry(self.frame1, width=18, font = smallLabel, textvariable = self.eFIlename)
         self.eFilenameText.grid(row=self.row_count, column=1, sticky=W+E+N+S, pady=3, columnspan=4)
         self.eFilenameText.insert(0, self.initial_string_value_filename)
         self.eFilenameText.config(fg = 'grey')
+        self.eFilenameText["state"] = "disabled"
         
         def on_entry_click_filename(event):
             if self.eFilenameText.get() == self.initial_string_value_filename:
