@@ -64,8 +64,13 @@ class Application(Frame):
         self.ser = Serial()
 
         self.rx_count = 0
-
         self.output_file = None
+
+        # data to be capture
+        self.data_query = {
+            "sn" : "",
+            "mac" : "",
+        }
 
     def scan_available_ports(self):
         """ Lists serial port names
@@ -256,23 +261,30 @@ class Application(Frame):
             tk.messagebox.showerror(title="Error", message=message_string)
             return
 
-        message = "AT+GMR\r\n".encode(encoding='ascii')
+        message = "getprop ubootenv.var.ethaddr\r".encode(encoding='ascii')
         self.ser.write(message)
         time.sleep(.2)
 
         read_data = self.ser.read_all().decode(encoding='ascii')
+        #read_data = self.ser.readlines().decode(encoding='ascii')
+
+        string_split = read_data.splitlines()
+        print(string_split)
+        # just capture the serial number (ethaddr)
+        self.data_query['sn'] = string_split[2]
+
         tk.messagebox.showinfo(
             title="Status",
-            message="Message : {}".format(read_data)
+            message="data : {}".format(self.data_query['sn'])
         )
 
-        self.write_to_textbox(read_data)
+        self.write_to_textbox(self.data_query['sn'] + "\n")
 
         self.output_file = self.directory_path + "/" + self.eFIlename.get() + ".txt"
         # try to create file
         try:
             out_file = open(self.output_file, 'a')
-            out_file.writelines(read_data)
+            out_file.writelines(self.data_query['sn'] + "\n")
             out_file.close()
         except IOError as err:
             print("Err : {}".format(err))
@@ -366,7 +378,7 @@ class Application(Frame):
         self.row_count = self.row_count + 1
 
         # Baudrate
-        self.serial_property["baud"] = tk.StringVar(value="9600")
+        self.serial_property["baud"] = tk.StringVar(value="115200")
         self.lblBaud = Label(self.frame1, text="Baudrate", width=30, font=smallLabel, anchor="w")
         self.lblBaud.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
 
@@ -476,7 +488,7 @@ if __name__ == "__main__":
     root.title("Serial number query v%s" % (__version__))
     # root.geometry("320x200+0+0")
     try:
-        root.iconbitmap("downloader.ico")
+        root.iconbitmap("app.ico")
     except Exception as e:
         print(e)
     # lock the root size
