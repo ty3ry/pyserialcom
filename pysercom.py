@@ -29,11 +29,14 @@ __author__ = "Cosmas Eric. s"
 __copyright__ = "Copyright 2020, Serial communication project"
 
 __license__ = "GPL"
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 __maintainer__ = "Cosmas Eric "
 __email__ = "cosmas.eric.septian@polytron.co.id"
 __status__ = "Internal Test Beta"
 
+
+CMD_GET_SN = "getprop ubootenv.var.ethaddr\r"
+CMD_GET_MAC = "ip addr show wlan0  | grep 'link/ether '| cut -d' ' -f6\r"
 
 class Application(Frame):
     def __init__(self, master=None):
@@ -107,10 +110,7 @@ class Application(Frame):
         return result
 
     def terminate_all_process(self):
-        if (
-            hasattr(self, "current_process")
-            and type(self.current_process) is subprocess.Popen
-        ):
+        if ( hasattr(self, "current_process") and type(self.current_process) is subprocess.Popen):
             try:
                 self.current_process.terminate()
                 self.current_process.wait()
@@ -147,11 +147,8 @@ class Application(Frame):
         if self.directory_path:
             # (filepath, tempfilename) = os.path.split(self.directory_path)
             # (shotname, extension) = os.path.splitext(tempfilename)
-
             self.lblDirectoryPath["text"] = self.directory_path           
-
         else:
-            # self.ttext.insert(END, 'No BIN file selected.' + '\n')
             pass
     
     def write_to_textbox(self, message):
@@ -270,57 +267,64 @@ class Application(Frame):
             tk.messagebox.showerror(title="Error", message=message_string)
             return
 
-        message = "getprop ubootenv.var.ethaddr\r".encode(encoding='ascii')
+        # get serial number
+        message = CMD_GET_SN.encode(encoding='ascii')
         self.ser.write(message)
         time.sleep(.2)
+        read_data_sn = self.ser.read_all().decode(encoding='ascii')
 
-        read_data = self.ser.read_all().decode(encoding='ascii')
-        #read_data = self.ser.readlines().decode(encoding='ascii')
+        # get mac address
+        message = CMD_GET_MAC.encode(encoding='ascii')
+        self.ser.write(message)
+        time.sleep(.2)
+        read_data_mac = self.ser.read_all().decode(encoding='ascii')
 
-        string_split = read_data.splitlines()
-        print(string_split)
-        # just capture the serial number (ethaddr)
+        # split data
+        string_split_sn = read_data_sn.splitlines()
+        string_split_mac = read_data_mac.splitlines()
+        print(string_split_sn)
+        print(string_split_mac)
 
-        # filter data from garbage character
-        if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split[2].lower()):
-            self.data_query['sn'] = string_split[2]
+        # filter data serial number from garbage character
+        if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_sn[2].lower()):
+            self.data_query['sn'] = string_split_sn[2]
             tk.messagebox.showinfo(
                 title="Status",
-                message="data : {}".format(self.data_query['sn'])
+                message="SN : {}".format(self.data_query['sn'])
             )
         else:
             print("serial not valid")
             tk.messagebox.showerror(
                 title="Error",
-                message="data not valid"
+                message="SN data not valid"
+            )
+            return
+
+        # filter data mac address from garbage character
+        if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_mac[2].lower()):
+            self.data_query['mac'] = string_split_mac[2]
+            tk.messagebox.showinfo(
+                title="Status",
+                message="MAC : {}".format(self.data_query['mac'])
+            )
+        else:
+            print("MAC Address not valid")
+            tk.messagebox.showerror(
+                title="Error",
+                message="MAC data not valid"
             )
             return
         
-
-        self.write_to_textbox(self.data_query['sn'] + "\n")
-
-        print("directory output : {}".format(self.output_file))
+        self.write_to_textbox(self.data_query['sn'] + " " +  self.data_query['mac'] + "\n")
         
         # try to create file
         try:
             out_file = open(self.output_file, 'a')
-            out_file.writelines(self.data_query['sn'] + "\n")
+            out_file.writelines(self.data_query['sn'] + self.data_query['mac'] + "\n")
             out_file.close()
         except IOError as err:
             print("Err : {}".format(err))
         
-
-    def rightKey(self, event, editor):
-        ftLabel = font.Font(family="Verdana", size=20)
-        self.menubar.delete(0, END)
-        self.menubar.add_command(
-            label="clear", command=lambda: self.clear(editor), font=ftLabel
-        )
-        self.menubar.add("separator")
-        self.menubar.add_command(
-            label="copy", command=lambda: self.copy(editor), font=ftLabel
-        )
-        self.menubar.post(event.x_root, event.y_root)
 
     def createWidgets(self, main_frame):
         ftLabel = font.Font(family="Lucida Grande", size=12, weight=font.BOLD)
@@ -506,7 +510,7 @@ if __name__ == "__main__":
     print("Current os : {}".format(cur_os))
 
     root = Tk()
-    root.title("Serial number query v%s" % (__version__))
+    root.title("Serial Number Query V%s" % (__version__))
     # root.geometry("320x200+0+0")
     try:
         root.iconbitmap("app.ico")
