@@ -271,12 +271,22 @@ class Application(Frame):
         string_split = read_data.splitlines()
         print(string_split)
         # just capture the serial number (ethaddr)
-        self.data_query['sn'] = string_split[2]
 
-        tk.messagebox.showinfo(
-            title="Status",
-            message="data : {}".format(self.data_query['sn'])
-        )
+        # filter data from garbage character
+        if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split[2].lower()):
+            self.data_query['sn'] = string_split[2]
+            tk.messagebox.showinfo(
+                title="Status",
+                message="data : {}".format(self.data_query['sn'])
+            )
+        else:
+            print("serial not valid")
+            tk.messagebox.showerror(
+                title="Error",
+                message="data not valid"
+            )
+            return
+        
 
         self.write_to_textbox(self.data_query['sn'] + "\n")
 
