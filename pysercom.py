@@ -29,14 +29,15 @@ __author__ = "Cosmas Eric. s"
 __copyright__ = "Copyright 2020, Serial communication project"
 
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __maintainer__ = "Cosmas Eric "
 __email__ = "cosmas.eric.septian@polytron.co.id"
 __status__ = "Internal Test Beta"
 
 
-CMD_GET_SN = "getprop ubootenv.var.ethaddr\r"
-CMD_GET_MAC = "ip addr show wlan0  | grep 'link/ether '| cut -d' ' -f6\r"
+CMD_GET_SN = "getprop ro.serialno\r"
+#CMD_GET_MAC = "ip addr show wlan0  | grep 'link/ether '| cut -d' ' -f6\r"
+CMD_GET_MAC = "ip addr show | grep 'link/ether' | cut -d' ' -f6\r"
 
 class Application(Frame):
     def __init__(self, master=None):
@@ -285,8 +286,10 @@ class Application(Frame):
         print(string_split_sn)
         print(string_split_mac)
 
+        print("Serial number : {}".format(string_split_sn[2]))
+
         # filter data serial number from garbage character
-        if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_sn[2].lower()):
+        if re.match("[A-Z0-9]+$", string_split_sn[2]):
             self.data_query['sn'] = string_split_sn[2]
             tk.messagebox.showinfo(
                 title="Status",
@@ -301,8 +304,8 @@ class Application(Frame):
             return
 
         # filter data mac address from garbage character
-        if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_mac[2].lower()):
-            self.data_query['mac'] = string_split_mac[2]
+        if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_mac[4].lower()):
+            self.data_query['mac'] = string_split_mac[4]
             tk.messagebox.showinfo(
                 title="Status",
                 message="MAC : {}".format(self.data_query['mac'])
@@ -320,7 +323,7 @@ class Application(Frame):
         # try to create file
         try:
             out_file = open(self.output_file, 'a')
-            out_file.writelines(self.data_query['sn'] + self.data_query['mac'] + "\n")
+            out_file.writelines(self.data_query['sn'] + " " + self.data_query['mac'] + "\n")
             out_file.close()
         except IOError as err:
             print("Err : {}".format(err))
