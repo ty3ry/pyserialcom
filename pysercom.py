@@ -22,6 +22,7 @@ import pyqrcode
 import png
 # import pyzbar.pyzbar import decode
 import qrtools
+from scanner import Scanner
 
 from serial import Serial, SerialException
 from serial import PARITY_EVEN, PARITY_MARK, PARITY_NAMES, PARITY_NONE, PARITY_ODD, PARITY_SPACE
@@ -45,6 +46,8 @@ CMD_GET_SN = "getprop ro.serialno\r"
 CMD_GET_MAC = "ip addr show | grep 'link/ether' | cut -d' ' -f6\r"
 
 listScanMac = []
+VENDOR_ID = 0x27DD
+PRODUCT_ID = 0x0103
 
 class Application(Frame):
     def __init__(self, master=None):
@@ -71,7 +74,9 @@ class Application(Frame):
         # print("The decoded QR code is: %s" % s)
 
         self.serial_property = {
-            "port" : "",
+            "port1" : "",
+            "port2" : "",
+            "port3" : "",
             "baud" : 9600,
             "data" : 8,
             "parity" : "None",
@@ -80,7 +85,9 @@ class Application(Frame):
 
         self.default_filename = "hkc_sn_mac"
 
-        self.uart_open = False
+        self.uart1_open = False
+        self.uart2_open = False
+        self.uart3_open = False
 
         self.createWidgets(main_frame)
         self.dl_thread = 0
@@ -91,7 +98,9 @@ class Application(Frame):
         # threading.Thread(target=self.check_files).start()
 
         # create serial
-        self.ser = Serial()
+        self.ser1 = Serial()
+        self.ser2 = Serial()
+        self.ser3 = Serial()
 
         self.rx_count = 0
         self.output_file = None
@@ -107,6 +116,9 @@ class Application(Frame):
 
     def clearListMac(self):
         listScanMac.clear()
+
+    def getListSize(self):
+        return len(listScanMac)
 
     def scan_available_ports(self):
         """ Lists serial port names
@@ -181,9 +193,8 @@ class Application(Frame):
         else:
             pass
     
-    def write_to_textbox(self, message):
-        self.OutputText.insert(tk.END, f"[{self.rx_count}] " + message)
-        self.rx_count = self.rx_count + 1
+    def write_to_textbox(self, message, tag):
+        self.OutputText.insert(tk.END, message + "\n", tag)
 
     def enable_uart_component(self, state):
         if state == True:
@@ -200,8 +211,8 @@ class Application(Frame):
             self.comboStop["state"] = "disable"
 
 
-    def open_com_event(self):
-        if self.uart_open == False:
+    def open_com_event1(self):
+        if self.uart1_open == False:
             try:
                 # print("port: {}".format(self.serial_property["port"].get()))
                 # print("baud: {}".format(self.serial_property["baud"].get()))
@@ -209,73 +220,131 @@ class Application(Frame):
                 # print("parity: {}".format(self.serial_property["parity"].get()))
                 # print("stop: {}".format(self.serial_property["stop"].get()))
 
-                self.ser.port = self.serial_property["port"].get()
-                self.ser.baudrate = 115200
-                
-                # serial data size
-                # if self.serial_property["data"] == "5":
-                #     self.ser.bytesize = FIVEBITS
-                # elif self.serial_property["data"] == "6":
-                #     self.ser.bytesize = SIXBITS
-                # elif self.serial_property["data"] == "7":
-                #     self.ser.bytesize = SEVENBITS
-                # elif self.serial_property["data"] == "8":
-                #     self.ser.bytesize = EIGHTBITS
-                self.ser.bytesize = EIGHTBITS
+                self.ser1.port = self.serial_property["port1"].get()
+                self.ser1.baudrate = 115200
+                self.ser1.bytesize = EIGHTBITS
+                self.ser1.parity = PARITY_NONE
+                self.ser1.stopbits = STOPBITS_ONE
 
-                # set parity
-                # if self.serial_property["parity"] == "None":
-                #     self.ser.parity = PARITY_NONE
-                # elif self.serial_property["parity"] == "Odd":
-                #     self.ser.parity = PARITY_ODD
-                # elif self.serial_property["parity"] == "Even":
-                #     self.ser.parity = PARITY_EVEN
-                # elif self.serial_property["parity"] == "Mark":
-                #     self.ser.parity = PARITY_MARK
-                # elif self.serial_property["parity"] == "Space":
-                #     self.ser.parity = PARITY_SPACE
-                self.ser.parity = PARITY_NONE
-
-                # set stop bit
-                # if self.serial_property["stop"] == "1":
-                #     self.ser.stopbits = STOPBITS_ONE
-                # elif self.serial_property["stop"] == "1.5":
-                #     self.ser.stopbits = STOPBITS_ONE_POINT_FIVE
-                # elif self.serial_property["stop"] == "2":
-                #     self.ser.stopbits = STOPBITS_TWO
-                self.ser.stopbits = STOPBITS_ONE
-
-                self.ser.open()
+                self.ser1.open()
 
             except Exception as err:
                 message_string = "Error while open serial : {}".format(err)
                 tk.messagebox.showerror(title="Error", message=message_string)
 
-            if self.ser.isOpen():
-                self.btnOpenCom["text"] = "Close"
-                self.uart_open = True
-                self.lblComStatusVal["text"] = "Open : {} {} {} {} {}".format(
-                    self.ser.port,
-                    self.ser.baudrate,
-                    self.ser.bytesize,
-                    self.ser.parity,
-                    self.ser.stopbits
-                )
+            if self.ser1.isOpen():
+                self.btnOpenCom1["text"] = "Close"
+                self.uart1_open = True
+                self.btnOpenCom1["bg"] = "#00FF00"
                 # disable component
-                self.enable_uart_component(False)
+                #self.enable_uart_component(False)
         else:
             try:
-                self.ser.close()
+                self.ser1.close()
             except Exception as err:
                 print("Failed to close serial port : {}".format(err))
             
-            if self.ser.isOpen() == False:
-                self.btnOpenCom["text"] = "Open"
-                self.uart_open = False
-                self.lblComStatusVal["text"] = "Closed"
-                self.enable_uart_component(True)
+            if self.ser1.isOpen() == False:
+                self.btnOpenCom1["text"] = "Open"
+                self.uart1_open = False
+                self.btnOpenCom1["bg"] = "#6495ED"
+                #self.enable_uart_component(True)
+
+    def open_com_event2(self):
+        if self.uart2_open == False:
+            try:
+                # print("port: {}".format(self.serial_property["port"].get()))
+                # print("baud: {}".format(self.serial_property["baud"].get()))
+                # print("data: {}".format(self.serial_property["data"].get()))
+                # print("parity: {}".format(self.serial_property["parity"].get()))
+                # print("stop: {}".format(self.serial_property["stop"].get()))
+
+                self.ser2.port = self.serial_property["port2"].get()
+                self.ser2.baudrate = 115200
+                self.ser2.bytesize = EIGHTBITS
+                self.ser2.parity = PARITY_NONE
+                self.ser2.stopbits = STOPBITS_ONE
+
+                self.ser2.open()
+
+            except Exception as err:
+                message_string = "Error while open serial : {}".format(err)
+                tk.messagebox.showerror(title="Error", message=message_string)
+
+            if self.ser2.isOpen():
+                self.btnOpenCom2["text"] = "Close"
+                self.uart2_open = True
+                self.btnOpenCom2["bg"] = "#00FF00"
+                # disable component
+                #self.enable_uart_component(False)
+        else:
+            try:
+                self.ser2.close()
+            except Exception as err:
+                print("Failed to close serial port : {}".format(err))
+            
+            if self.ser2.isOpen() == False:
+                self.btnOpenCom2["text"] = "Open"
+                self.uart2_open = False
+                self.btnOpenCom2["bg"] = "#6495ED"
+                #self.enable_uart_component(True)
+
+    def open_com_event3(self):
+        if self.uart3_open == False:
+            try:
+                # print("port: {}".format(self.serial_property["port"].get()))
+                # print("baud: {}".format(self.serial_property["baud"].get()))
+                # print("data: {}".format(self.serial_property["data"].get()))
+                # print("parity: {}".format(self.serial_property["parity"].get()))
+                # print("stop: {}".format(self.serial_property["stop"].get()))
+
+                self.ser3.port = self.serial_property["port3"].get()
+                self.ser3.baudrate = 115200
+                self.ser3.bytesize = EIGHTBITS
+                self.ser3.parity = PARITY_NONE
+                self.ser3.stopbits = STOPBITS_ONE
+
+                self.ser3.open()
+
+            except Exception as err:
+                message_string = "Error while open serial : {}".format(err)
+                tk.messagebox.showerror(title="Error", message=message_string)
+
+            if self.ser3.isOpen():
+                self.btnOpenCom3["text"] = "Close"
+                self.uart3_open = True
+                self.btnOpenCom3["bg"] = "#00FF00"
+                # disable component
+                #self.enable_uart_component(False)
+        else:
+            try:
+                self.ser3.close()
+            except Exception as err:
+                print("Failed to close serial port : {}".format(err))
+            
+            if self.ser3.isOpen() == False:
+                self.btnOpenCom3["text"] = "Open"
+                self.uart3_open = False
+                self.btnOpenCom1["bg"] = "#6495ED"
+                # self.enable_uart_component(True)
 
     def event_start(self):
+        if not self.ser1.isOpen():
+            message_string = "Open com Port 1 first !!"
+            tk.messagebox.showerror(title="Error", message=message_string)
+            return
+        
+        if not self.ser2.isOpen():
+            message_string = "Open com Port 2 first !!"
+            tk.messagebox.showerror(title="Error", message=message_string)
+            return
+        
+        if not self.ser3.isOpen():
+            message_string = "Open com Port 3 first !!"
+            tk.messagebox.showerror(title="Error", message=message_string)
+            return
+
+    def event_start1(self):
         message_string = ""
 
         if not self.directory_path:
@@ -418,79 +487,77 @@ class Application(Frame):
 
         self.row_count = self.row_count + 1
 
-        # Port/com
-        self.lblPort = Label(self.frame1, text="Port", width=30, font=smallLabel, anchor="w")
-        self.lblPort.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
+        # Port/com 1
+        self.lblPort1 = Label(self.frame1, text="Port 1", width=30, font=smallLabel, anchor="w")
+        self.lblPort1.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
 
         # scan available port
-        ports =  self.scan_available_ports()
+        ports1 =  self.scan_available_ports()
         #print("len : {}".format(len(ports)))
         initial_port = None
-        if len(ports) > 0:
-            initial_port = ports[0]
+        if len(ports1) > 0:
+            initial_port = ports1[0]
             
-        self.serial_property["port"] = tk.StringVar(value=initial_port)
-        self.comboPort = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["port"])
-        self.comboPort["values"] = self.scan_available_ports() #("com1", "com2", "com3", "com4", "com5")
-        self.comboPort["state"] = "readonly"
-        self.comboPort.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
+        self.serial_property["port1"] = tk.StringVar(value=initial_port)
+        self.comboPort1 = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["port1"])
+        self.comboPort1["values"] = self.scan_available_ports() #("com1", "com2", "com3", "com4", "com5")
+        self.comboPort1["state"] = "readonly"
+        self.comboPort1.grid(row=self.row_count, column=1, sticky=W + E, columnspan=1, pady=3)
 
-        self.btnOpenCom = Button(self.frame1, text="Open", width=12, font=ftButton, bg="#6495ED")
-        self.btnOpenCom.grid(row=self.row_count, column=3, sticky=W + E , columnspan=1)
-        self.btnOpenCom["command"] = self.open_com_event
-
-        # self.lblComStatusVal = Label(self.frame1, text="Closed", width=30, font=smallLabel, anchor="w")
-        # self.lblComStatusVal.grid(row=self.row_count, column=4, sticky=W + E, columnspan=4, pady=3)
-        
+        self.btnOpenCom1 = Button(self.frame1, text="Open", width=12, font=ftButton, bg="#6495ED")
+        self.btnOpenCom1.grid(row=self.row_count, column=3, sticky=W + E + N + S, columnspan=1)
+        self.btnOpenCom1["command"] = self.open_com_event1
         self.row_count = self.row_count + 1
 
-        # Baudrate
-        # self.serial_property["baud"] = tk.StringVar(value="115200")
-        # self.lblBaud = Label(self.frame1, text="Baudrate", width=30, font=smallLabel, anchor="w")
-        # self.lblBaud.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
+        # space -----
+        self.space = Label(self.frame1, text="", width=30, font=smallLabel, anchor="w")
+        self.space.grid(row=self.row_count, column=0, sticky=W + E, columnspan=2)
 
-        # self.comboBaud = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["baud"])
-        # self.comboBaud["values"] = ("9600", "19200", "38400", "57600", "115200", "230400")
-        # self.comboBaud["state"] = "readonly"
-        # self.comboBaud.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
+        #self.row_count = self.row_count + 1
 
-        # self.row_count = self.row_count + 1
+        # Port/com 2
+        self.lblPort2 = Label(self.frame1, text="Port 2", width=30, font=smallLabel, anchor="w")
+        self.lblPort2.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
 
-        # Data bits
-        # self.serial_property["data"] = tk.StringVar(value="8")
-        # self.lblDataBits = Label(self.frame1, text="Data Bits", width=30, font=smallLabel, anchor="w")
-        # self.lblDataBits.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
+        # scan available port
+        ports2 =  self.scan_available_ports()
+        #print("len : {}".format(len(ports)))
+        initial_port = None
+        if len(ports2) > 0:
+            initial_port = ports2[0]
+            
+        self.serial_property["port2"] = tk.StringVar(value=initial_port)
+        self.comboPort2 = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["port2"])
+        self.comboPort2["values"] = self.scan_available_ports() #("com1", "com2", "com3", "com4", "com5")
+        self.comboPort2["state"] = "readonly"
+        self.comboPort2.grid(row=self.row_count, column=1, sticky=W + E, columnspan=1, pady=3)
 
-        # self.comboData = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["data"])
-        # self.comboData["values"] = ("5", "6", "7", "8")
-        # self.comboData["state"] = "readonly"
-        # self.comboData.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
+        self.btnOpenCom2 = Button(self.frame1, text="Open", width=12, font=ftButton, bg="#6495ED")
+        self.btnOpenCom2.grid(row=self.row_count, column=3, sticky=W + E + N + S, columnspan=1)
+        self.btnOpenCom2["command"] = self.open_com_event2
+        self.row_count = self.row_count + 1
 
-        # self.row_count = self.row_count + 1
+        # Port/com 3
+        self.lblPort3 = Label(self.frame1, text="Port 3", width=30, font=smallLabel, anchor="w")
+        self.lblPort3.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
 
-        # stop
-        # self.serial_property["stop"] = tk.StringVar(value="1")
-        # self.lblStopBit = Label(self.frame1, text="Stop Bits", width=30, font=smallLabel, anchor="w")
-        # self.lblStopBit.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
+        # scan available port
+        ports3 =  self.scan_available_ports()
+        #print("len : {}".format(len(ports)))
+        initial_port = None
+        if len(ports3) > 0:
+            initial_port = ports3[0]
+            
+        self.serial_property["port3"] = tk.StringVar(value=initial_port)
+        self.comboPort3 = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["port3"])
+        self.comboPort3["values"] = self.scan_available_ports() #("com1", "com2", "com3", "com4", "com5")
+        self.comboPort3["state"] = "readonly"
+        self.comboPort3.grid(row=self.row_count, column=1, sticky=W + E, columnspan=1, pady=3)
 
-        # self.comboStop = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["stop"])
-        # self.comboStop["values"] = ("1", "1.5", "2")
-        # self.comboStop["state"] = "readonly"
-        # self.comboStop.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
-
-        # self.row_count = self.row_count + 1
-
-        # Parity
-        # self.serial_property["parity"] = tk.StringVar(value="None")
-        # self.lblParity = Label(self.frame1, text="Parity", width=30, font=smallLabel, anchor="w")
-        # self.lblParity.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
-
-        # self.comboParity = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["parity"])
-        # self.comboParity["values"] = ("None", "Even", "Odd", "Mark", "Space")
-        # self.comboParity["state"] = "readonly"
-        # self.comboParity.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
-
-        # self.row_count = self.row_count + 1
+        self.btnOpenCom3 = Button(self.frame1, text="Open", width=12, font=ftButton, bg="#6495ED")
+        self.btnOpenCom3.grid(row=self.row_count, column=3, sticky=W + E + N + S, columnspan=1)
+        self.btnOpenCom3["command"] = self.open_com_event3
+        self.row_count = self.row_count + 1
 
         # space -----
         self.space = Label(self.frame1, text="", width=30, font=smallLabel, anchor="w")
@@ -515,6 +582,8 @@ class Application(Frame):
         scrollbarRecv.pack(side = tk.RIGHT, fill = tk.Y)
         self.OutputText = tk.Text(frameRecvSon, wrap = tk.WORD, width = 42, height = 10, yscrollcommand = scrollbarRecv.set)
         self.OutputText.pack()
+        self.OutputText.tag_config('error', background="yellow", foreground="red")
+        self.OutputText.tag_config('success', foreground="green")
 
         self.row_count = self.row_count + 1
 
@@ -560,4 +629,18 @@ if __name__ == "__main__":
         # to minimize the console windows
         ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 6)
 
-    app.mainloop()
+    #app.mainloop()
+    scans = Scanner()
+    try:
+        scans.findDevice(VENDOR_ID, PRODUCT_ID)
+    except Exception as identifier:
+        tk.messagebox.showerror(title="Barcode Scanner Not Found", message=identifier)
+        sys.exit(1)
+    while True:
+        app.update()
+        value = scans.startScan()
+        if (value != None) :
+            if (app.getListSize() < 3) :
+                app.insertMac(value)
+                
+
