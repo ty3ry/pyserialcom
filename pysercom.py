@@ -18,6 +18,11 @@ import ctypes
 import hashlib
 import configparser
 import platform
+import pyqrcode
+import png
+# import pyzbar.pyzbar import decode
+import qrtools
+
 from serial import Serial, SerialException
 from serial import PARITY_EVEN, PARITY_MARK, PARITY_NAMES, PARITY_NONE, PARITY_ODD, PARITY_SPACE
 from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE , STOPBITS_TWO
@@ -29,7 +34,7 @@ __author__ = "Cosmas Eric. s"
 __copyright__ = "Copyright 2020, Serial communication project"
 
 __license__ = "GPL"
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 __maintainer__ = "Cosmas Eric "
 __email__ = "cosmas.eric.septian@polytron.co.id"
 __status__ = "Internal Test Beta"
@@ -39,12 +44,31 @@ CMD_GET_SN = "getprop ro.serialno\r"
 #CMD_GET_MAC = "ip addr show wlan0  | grep 'link/ether '| cut -d' ' -f6\r"
 CMD_GET_MAC = "ip addr show | grep 'link/ether' | cut -d' ' -f6\r"
 
+listScanMac = []
+
 class Application(Frame):
     def __init__(self, master=None):
         Frame.__init__(self, master)
         self.pack(fill=BOTH, expand=1)
         main_frame = Frame(master)
         main_frame.pack(fill="y", expand=1)
+        
+        #scan insert clear mac
+        #self.insertMac("abc")
+        #self.insertMac("def")
+        #print(listScanMac)
+        #for x in listScanMac:
+        #    print(x)
+        #self.clearListMac()
+        #print(listScanMac)
+        #create qrcode
+        #qr = pyqrcode.create("test1")
+        #qr.png("D:\Python Project\pyserialcom", scale=6)
+        
+        # qr = qrtools.QR()
+        # qr.decode("test1.png")
+        # s = qr.data
+        # print("The decoded QR code is: %s" % s)
 
         self.serial_property = {
             "port" : "",
@@ -78,6 +102,11 @@ class Application(Frame):
             "mac" : "",
         }
         
+    def insertMac(self, mac):
+        listScanMac.append(mac)
+
+    def clearListMac(self):
+        listScanMac.clear()
 
     def scan_available_ports(self):
         """ Lists serial port names
@@ -181,37 +210,40 @@ class Application(Frame):
                 # print("stop: {}".format(self.serial_property["stop"].get()))
 
                 self.ser.port = self.serial_property["port"].get()
-                self.ser.baudrate = self.serial_property["baud"].get()
+                self.ser.baudrate = 115200
                 
                 # serial data size
-                if self.serial_property["data"] == "5":
-                    self.ser.bytesize = FIVEBITS
-                elif self.serial_property["data"] == "6":
-                    self.ser.bytesize = SIXBITS
-                elif self.serial_property["data"] == "7":
-                    self.ser.bytesize = SEVENBITS
-                elif self.serial_property["data"] == "8":
-                    self.ser.bytesize = EIGHTBITS
+                # if self.serial_property["data"] == "5":
+                #     self.ser.bytesize = FIVEBITS
+                # elif self.serial_property["data"] == "6":
+                #     self.ser.bytesize = SIXBITS
+                # elif self.serial_property["data"] == "7":
+                #     self.ser.bytesize = SEVENBITS
+                # elif self.serial_property["data"] == "8":
+                #     self.ser.bytesize = EIGHTBITS
+                self.ser.bytesize = EIGHTBITS
 
                 # set parity
-                if self.serial_property["parity"] == "None":
-                    self.ser.parity = PARITY_NONE
-                elif self.serial_property["parity"] == "Odd":
-                    self.ser.parity = PARITY_ODD
-                elif self.serial_property["parity"] == "Even":
-                    self.ser.parity = PARITY_EVEN
-                elif self.serial_property["parity"] == "Mark":
-                    self.ser.parity = PARITY_MARK
-                elif self.serial_property["parity"] == "Space":
-                    self.ser.parity = PARITY_SPACE
+                # if self.serial_property["parity"] == "None":
+                #     self.ser.parity = PARITY_NONE
+                # elif self.serial_property["parity"] == "Odd":
+                #     self.ser.parity = PARITY_ODD
+                # elif self.serial_property["parity"] == "Even":
+                #     self.ser.parity = PARITY_EVEN
+                # elif self.serial_property["parity"] == "Mark":
+                #     self.ser.parity = PARITY_MARK
+                # elif self.serial_property["parity"] == "Space":
+                #     self.ser.parity = PARITY_SPACE
+                self.ser.parity = PARITY_NONE
 
                 # set stop bit
-                if self.serial_property["stop"] == "1":
-                    self.ser.stopbits = STOPBITS_ONE
-                elif self.serial_property["stop"] == "1.5":
-                    self.ser.stopbits = STOPBITS_ONE_POINT_FIVE
-                elif self.serial_property["stop"] == "2":
-                    self.ser.stopbits = STOPBITS_TWO
+                # if self.serial_property["stop"] == "1":
+                #     self.ser.stopbits = STOPBITS_ONE
+                # elif self.serial_property["stop"] == "1.5":
+                #     self.ser.stopbits = STOPBITS_ONE_POINT_FIVE
+                # elif self.serial_property["stop"] == "2":
+                #     self.ser.stopbits = STOPBITS_TWO
+                self.ser.stopbits = STOPBITS_ONE
 
                 self.ser.open()
 
@@ -403,68 +435,67 @@ class Application(Frame):
         self.comboPort["state"] = "readonly"
         self.comboPort.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
 
+        self.btnOpenCom = Button(self.frame1, text="Open", width=12, font=ftButton, bg="#6495ED")
+        self.btnOpenCom.grid(row=self.row_count, column=3, sticky=W + E , columnspan=1)
+        self.btnOpenCom["command"] = self.open_com_event
+
+        # self.lblComStatusVal = Label(self.frame1, text="Closed", width=30, font=smallLabel, anchor="w")
+        # self.lblComStatusVal.grid(row=self.row_count, column=4, sticky=W + E, columnspan=4, pady=3)
+        
         self.row_count = self.row_count + 1
 
         # Baudrate
-        self.serial_property["baud"] = tk.StringVar(value="115200")
-        self.lblBaud = Label(self.frame1, text="Baudrate", width=30, font=smallLabel, anchor="w")
-        self.lblBaud.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
+        # self.serial_property["baud"] = tk.StringVar(value="115200")
+        # self.lblBaud = Label(self.frame1, text="Baudrate", width=30, font=smallLabel, anchor="w")
+        # self.lblBaud.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
 
-        self.comboBaud = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["baud"])
-        self.comboBaud["values"] = ("9600", "19200", "38400", "57600", "115200", "230400")
-        self.comboBaud["state"] = "readonly"
-        self.comboBaud.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
+        # self.comboBaud = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["baud"])
+        # self.comboBaud["values"] = ("9600", "19200", "38400", "57600", "115200", "230400")
+        # self.comboBaud["state"] = "readonly"
+        # self.comboBaud.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
 
-        self.row_count = self.row_count + 1
+        # self.row_count = self.row_count + 1
 
         # Data bits
-        self.serial_property["data"] = tk.StringVar(value="8")
-        self.lblDataBits = Label(self.frame1, text="Data Bits", width=30, font=smallLabel, anchor="w")
-        self.lblDataBits.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
+        # self.serial_property["data"] = tk.StringVar(value="8")
+        # self.lblDataBits = Label(self.frame1, text="Data Bits", width=30, font=smallLabel, anchor="w")
+        # self.lblDataBits.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
 
-        self.comboData = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["data"])
-        self.comboData["values"] = ("5", "6", "7", "8")
-        self.comboData["state"] = "readonly"
-        self.comboData.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
+        # self.comboData = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["data"])
+        # self.comboData["values"] = ("5", "6", "7", "8")
+        # self.comboData["state"] = "readonly"
+        # self.comboData.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
 
-        self.row_count = self.row_count + 1
+        # self.row_count = self.row_count + 1
 
         # stop
-        self.serial_property["stop"] = tk.StringVar(value="1")
-        self.lblStopBit = Label(self.frame1, text="Stop Bits", width=30, font=smallLabel, anchor="w")
-        self.lblStopBit.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
+        # self.serial_property["stop"] = tk.StringVar(value="1")
+        # self.lblStopBit = Label(self.frame1, text="Stop Bits", width=30, font=smallLabel, anchor="w")
+        # self.lblStopBit.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
 
-        self.comboStop = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["stop"])
-        self.comboStop["values"] = ("1", "1.5", "2")
-        self.comboStop["state"] = "readonly"
-        self.comboStop.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
+        # self.comboStop = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["stop"])
+        # self.comboStop["values"] = ("1", "1.5", "2")
+        # self.comboStop["state"] = "readonly"
+        # self.comboStop.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
 
-        self.row_count = self.row_count + 1
+        # self.row_count = self.row_count + 1
 
         # Parity
-        self.serial_property["parity"] = tk.StringVar(value="None")
-        self.lblParity = Label(self.frame1, text="Parity", width=30, font=smallLabel, anchor="w")
-        self.lblParity.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
+        # self.serial_property["parity"] = tk.StringVar(value="None")
+        # self.lblParity = Label(self.frame1, text="Parity", width=30, font=smallLabel, anchor="w")
+        # self.lblParity.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
 
-        self.comboParity = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["parity"])
-        self.comboParity["values"] = ("None", "Even", "Odd", "Mark", "Space")
-        self.comboParity["state"] = "readonly"
-        self.comboParity.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
+        # self.comboParity = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["parity"])
+        # self.comboParity["values"] = ("None", "Even", "Odd", "Mark", "Space")
+        # self.comboParity["state"] = "readonly"
+        # self.comboParity.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
 
-        self.row_count = self.row_count + 1
+        # self.row_count = self.row_count + 1
 
         # space -----
         self.space = Label(self.frame1, text="", width=30, font=smallLabel, anchor="w")
         self.space.grid(row=self.row_count, column=0, sticky=W + E, columnspan=2)
 
-        self.row_count = self.row_count + 1
-
-        self.btnOpenCom = Button(self.frame1, text="Open", width=12, font=ftButton, bg="#6495ED")
-        self.btnOpenCom.grid(row=self.row_count, column=0, sticky=W + E + N + S, columnspan=1)
-        self.btnOpenCom["command"] = self.open_com_event
-
-        self.lblComStatusVal = Label(self.frame1, text="Closed", width=30, font=smallLabel, anchor="w")
-        self.lblComStatusVal.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
         self.row_count = self.row_count + 1
 
         # space -----
