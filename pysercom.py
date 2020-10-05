@@ -386,88 +386,79 @@ class Application(Frame):
 
         self.row_count = self.row_count + 1
 
-        # Port/com
-        self.lblPort = Label(self.frame1, text="Port", width=30, font=smallLabel, anchor="w")
-        self.lblPort.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
+        # Port/com 1
+        self.lblPort1 = Label(self.frame1, text="Port 1", width=30, font=smallLabel, anchor="w")
+        self.lblPort1.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
 
         # scan available port
-        ports =  self.scan_available_ports()
+        ports1 =  self.scan_available_ports()
         #print("len : {}".format(len(ports)))
         initial_port = None
-        if len(ports) > 0:
-            initial_port = ports[0]
+        if len(ports1) > 0:
+            initial_port = ports1[0]
             
         self.serial_property["port"] = tk.StringVar(value=initial_port)
-        self.comboPort = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["port"])
-        self.comboPort["values"] = self.scan_available_ports() #("com1", "com2", "com3", "com4", "com5")
-        self.comboPort["state"] = "readonly"
-        self.comboPort.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
+        self.comboPort1 = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["port"])
+        self.comboPort1["values"] = self.scan_available_ports() #("com1", "com2", "com3", "com4", "com5")
+        self.comboPort1["state"] = "readonly"
+        self.comboPort1.grid(row=self.row_count, column=1, sticky=W + E, columnspan=1, pady=3)
 
-        self.row_count = self.row_count + 1
-
-        # Baudrate
-        self.serial_property["baud"] = tk.StringVar(value="115200")
-        self.lblBaud = Label(self.frame1, text="Baudrate", width=30, font=smallLabel, anchor="w")
-        self.lblBaud.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
-
-        self.comboBaud = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["baud"])
-        self.comboBaud["values"] = ("9600", "19200", "38400", "57600", "115200", "230400")
-        self.comboBaud["state"] = "readonly"
-        self.comboBaud.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
-
-        self.row_count = self.row_count + 1
-
-        # Data bits
-        self.serial_property["data"] = tk.StringVar(value="8")
-        self.lblDataBits = Label(self.frame1, text="Data Bits", width=30, font=smallLabel, anchor="w")
-        self.lblDataBits.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
-
-        self.comboData = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["data"])
-        self.comboData["values"] = ("5", "6", "7", "8")
-        self.comboData["state"] = "readonly"
-        self.comboData.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
-
-        self.row_count = self.row_count + 1
-
-        # stop
-        self.serial_property["stop"] = tk.StringVar(value="1")
-        self.lblStopBit = Label(self.frame1, text="Stop Bits", width=30, font=smallLabel, anchor="w")
-        self.lblStopBit.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
-
-        self.comboStop = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["stop"])
-        self.comboStop["values"] = ("1", "1.5", "2")
-        self.comboStop["state"] = "readonly"
-        self.comboStop.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
-
-        self.row_count = self.row_count + 1
-
-        # Parity
-        self.serial_property["parity"] = tk.StringVar(value="None")
-        self.lblParity = Label(self.frame1, text="Parity", width=30, font=smallLabel, anchor="w")
-        self.lblParity.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
-
-        self.comboParity = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["parity"])
-        self.comboParity["values"] = ("None", "Even", "Odd", "Mark", "Space")
-        self.comboParity["state"] = "readonly"
-        self.comboParity.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
-
+        self.btnOpenCom1 = Button(self.frame1, text="Open", width=12, font=ftButton, bg="#6495ED")
+        self.btnOpenCom1.grid(row=self.row_count, column=3, sticky=W + E + N + S, columnspan=1)
+        self.btnOpenCom1["command"] = self.open_com_event
         self.row_count = self.row_count + 1
 
         # space -----
         self.space = Label(self.frame1, text="", width=30, font=smallLabel, anchor="w")
         self.space.grid(row=self.row_count, column=0, sticky=W + E, columnspan=2)
 
+        #self.row_count = self.row_count + 1
+
+        # Port/com 2
+        self.lblPort2 = Label(self.frame1, text="Port 2", width=30, font=smallLabel, anchor="w")
+        self.lblPort2.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
+
+        # scan available port
+        ports2 =  self.scan_available_ports()
+        #print("len : {}".format(len(ports)))
+        initial_port = None
+        if len(ports2) > 0:
+            initial_port = ports2[0]
+            
+        self.serial_property["port"] = tk.StringVar(value=initial_port)
+        self.comboPort2 = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["port"])
+        self.comboPort2["values"] = self.scan_available_ports() #("com1", "com2", "com3", "com4", "com5")
+        self.comboPort2["state"] = "readonly"
+        self.comboPort2.grid(row=self.row_count, column=1, sticky=W + E, columnspan=1, pady=3)
+
+        self.btnOpenCom2 = Button(self.frame1, text="Open", width=12, font=ftButton, bg="#6495ED")
+        self.btnOpenCom2.grid(row=self.row_count, column=3, sticky=W + E + N + S, columnspan=1)
+        self.btnOpenCom2["command"] = self.open_com_event
         self.row_count = self.row_count + 1
 
-        self.btnOpenCom = Button(self.frame1, text="Open", width=12, font=ftButton, bg="#6495ED")
-        self.btnOpenCom.grid(row=self.row_count, column=0, sticky=W + E + N + S, columnspan=1)
-        self.btnOpenCom["command"] = self.open_com_event
+        # Port/com 3
+        self.lblPort3 = Label(self.frame1, text="Port 3", width=30, font=smallLabel, anchor="w")
+        self.lblPort3.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
 
-        self.lblComStatusVal = Label(self.frame1, text="Closed", width=30, font=smallLabel, anchor="w")
-        self.lblComStatusVal.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
+        # scan available port
+        ports3 =  self.scan_available_ports()
+        #print("len : {}".format(len(ports)))
+        initial_port = None
+        if len(ports3) > 0:
+            initial_port = ports3[0]
+            
+        self.serial_property["port"] = tk.StringVar(value=initial_port)
+        self.comboPort3 = ttk.Combobox(self.frame1, width=17, textvariable=self.serial_property["port"])
+        self.comboPort3["values"] = self.scan_available_ports() #("com1", "com2", "com3", "com4", "com5")
+        self.comboPort3["state"] = "readonly"
+        self.comboPort3.grid(row=self.row_count, column=1, sticky=W + E, columnspan=1, pady=3)
+
+        self.btnOpenCom3 = Button(self.frame1, text="Open", width=12, font=ftButton, bg="#6495ED")
+        self.btnOpenCom3.grid(row=self.row_count, column=3, sticky=W + E + N + S, columnspan=1)
+        self.btnOpenCom3["command"] = self.open_com_event
         self.row_count = self.row_count + 1
 
-        # space -----
+         # space -----
         self.space = Label(self.frame1, text="", width=30, font=smallLabel, anchor="w")
         self.space.grid(row=self.row_count, column=0, sticky=W + E, columnspan=2)
         self.row_count = self.row_count + 1
