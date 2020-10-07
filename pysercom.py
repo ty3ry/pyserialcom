@@ -24,6 +24,9 @@ import png
 import qrtools
 from scanner import Scanner
 import requests
+import json
+from datetime import datetime
+import time
 
 from serial import Serial, SerialException
 from serial import PARITY_EVEN, PARITY_MARK, PARITY_NAMES, PARITY_NONE, PARITY_ODD, PARITY_SPACE
@@ -51,6 +54,7 @@ PRODUCT_ID = 0x0103
 URL_LINK = "http://10.8.42.44/mola/scan/scanHKC"
 USERNAME = "snreader"
 PASSWORD = "HkcSn20"
+LOG_PATH = "./log.txt"
 
 class Application(Frame):
     def __init__(self, master=None):
@@ -251,6 +255,7 @@ class Application(Frame):
 
             if self.ser1.isOpen():
                 self.btnOpenCom1["text"] = "Close"
+                self.comboPort1["state"] = "disable"
                 self.uart1_open = True
                 self.btnOpenCom1["bg"] = "#00FF00"
                 # disable component
@@ -263,6 +268,7 @@ class Application(Frame):
             
             if self.ser1.isOpen() == False:
                 self.btnOpenCom1["text"] = "Open"
+                self.comboPort1["state"] = "readonly"
                 self.uart1_open = False
                 self.btnOpenCom1["bg"] = "#6495ED"
                 #self.enable_uart_component(True)
@@ -290,6 +296,7 @@ class Application(Frame):
 
             if self.ser2.isOpen():
                 self.btnOpenCom2["text"] = "Close"
+                self.comboPort2["state"] = "disable"
                 self.uart2_open = True
                 self.btnOpenCom2["bg"] = "#00FF00"
                 # disable component
@@ -302,6 +309,7 @@ class Application(Frame):
             
             if self.ser2.isOpen() == False:
                 self.btnOpenCom2["text"] = "Open"
+                self.comboPort2["state"] = "readonly"
                 self.uart2_open = False
                 self.btnOpenCom2["bg"] = "#6495ED"
                 #self.enable_uart_component(True)
@@ -329,6 +337,7 @@ class Application(Frame):
 
             if self.ser3.isOpen():
                 self.btnOpenCom3["text"] = "Close"
+                self.comboPort3["state"] = "disable"
                 self.uart3_open = True
                 self.btnOpenCom3["bg"] = "#00FF00"
                 # disable component
@@ -341,8 +350,9 @@ class Application(Frame):
             
             if self.ser3.isOpen() == False:
                 self.btnOpenCom3["text"] = "Open"
+                self.comboPort3["state"] = "readonly"
                 self.uart3_open = False
-                self.btnOpenCom1["bg"] = "#6495ED"
+                self.btnOpenCom3["bg"] = "#6495ED"
                 # self.enable_uart_component(True)
 
     def event_start(self) :
@@ -355,40 +365,50 @@ class Application(Frame):
             message_string = "Open com Port 1 first !!"
             tk.messagebox.showerror(title="Error", message=message_string)
             return
+
+        if not self.ser2.isOpen():
+            message_string = "Open com Port 2 first !!"
+            tk.messagebox.showerror(title="Error", message=message_string)
+            return
         
+        if not self.ser3.isOpen():
+            message_string = "Open com Port 3 first !!"
+            tk.messagebox.showerror(title="Error", message=message_string)
+            return
         
         self.bStart["text"] = "Process"
         self.setBtnStartEnable("disable")
-        # if not self.ser2.isOpen():
-        #     message_string = "Open com Port 2 first !!"
-        #     tk.messagebox.showerror(title="Error", message=message_string)
-        #     return
-        
-        # if not self.ser3.isOpen():
-        #     message_string = "Open com Port 3 first !!"
-        #     tk.messagebox.showerror(title="Error", message=message_string)
-        #     return
 
         # === SERIAL 1 ====
         # get serial number
         message = CMD_GET_SN.encode(encoding='ascii')
         self.ser1.write(message)
-        time.sleep(.2)
+        time.sleep(1)
         read_data_sn = self.ser1.read_all().decode(encoding='ascii')
+        print("SN 1 = " + read_data_sn)
 
         # get mac address
         message = CMD_GET_MAC.encode(encoding='ascii')
         self.ser1.write(message)
-        time.sleep(.2)
+        time.sleep(1)
         read_data_mac = self.ser1.read_all().decode(encoding='ascii')
 
         string_split_sn = read_data_sn.splitlines()
         string_split_mac = read_data_mac.splitlines()
+
+        idx = 0
+        for i in range (len(string_split_sn)) :
+            print ("test : " , i , " - ", string_split_sn[i])
+            if (string_split_sn[i] == CMD_GET_SN.replace('\r','')) :
+                print(" bener : ", string_split_sn[i])
+                idx = i+2
+                break
+
         try:
             # filter data serial number from garbage character
-            if re.match("[A-Z0-9]+$", string_split_sn[2]):
+            if re.match("[A-Z0-9]+$", string_split_sn[idx]):
                 #self.data_query['sn'] = string_split_sn[2]
-                readSN = string_split_sn[2]
+                readSN = string_split_sn[idx]
             else:
                 readSN = "None"
         except Exception as identifier:
@@ -413,23 +433,33 @@ class Application(Frame):
         # === SERIAL 2 ====
         # get serial number
         message = CMD_GET_SN.encode(encoding='ascii')
-        self.ser1.write(message)
-        time.sleep(.2)
-        read_data_sn = self.ser1.read_all().decode(encoding='ascii')
+        self.ser2.write(message)
+        time.sleep(1)
+        read_data_sn = self.ser2.read_all().decode(encoding='ascii')
+        print("SN 2 = " + read_data_sn)
 
         # get mac address
         message = CMD_GET_MAC.encode(encoding='ascii')
-        self.ser1.write(message)
-        time.sleep(.2)
-        read_data_mac = self.ser1.read_all().decode(encoding='ascii')
+        self.ser2.write(message)
+        time.sleep(1)
+        read_data_mac = self.ser2.read_all().decode(encoding='ascii')
 
         string_split_sn = read_data_sn.splitlines()
         string_split_mac = read_data_mac.splitlines()
+
+        idx = 0
+        for i in range (len(string_split_sn)) :
+            print ("test : " , i , " - ", string_split_sn[i])
+            if (string_split_sn[i] == CMD_GET_SN.replace('\r','')) :
+                print(" bener : ", string_split_sn[i])
+                idx = i+2
+                break
+
         try:
             # filter data serial number from garbage character
-            if re.match("[A-Z0-9]+$", string_split_sn[2]):
+            if re.match("[A-Z0-9]+$", string_split_sn[idx]):
                 #self.data_query['sn'] = string_split_sn[2]
-                readSN = string_split_sn[2]
+                readSN = string_split_sn[idx]
             else:
                 readSN = "None"
         except Exception as identifier:
@@ -454,23 +484,33 @@ class Application(Frame):
         # === SERIAL 3 ====
         # get serial number
         message = CMD_GET_SN.encode(encoding='ascii')
-        self.ser1.write(message)
-        time.sleep(.2)
-        read_data_sn = self.ser1.read_all().decode(encoding='ascii')
+        self.ser3.write(message)
+        time.sleep(1)
+        read_data_sn = self.ser3.read_all().decode(encoding='ascii')
+        print("SN 3 = " + read_data_sn)
 
         # get mac address
         message = CMD_GET_MAC.encode(encoding='ascii')
-        self.ser1.write(message)
-        time.sleep(.2)
-        read_data_mac = self.ser1.read_all().decode(encoding='ascii')
+        self.ser3.write(message)
+        time.sleep(1)
+        read_data_mac = self.ser3.read_all().decode(encoding='ascii')
 
         string_split_sn = read_data_sn.splitlines()
         string_split_mac = read_data_mac.splitlines()
+
+        idx = 0
+        for i in range (len(string_split_sn)) :
+            print ("test : " , i , " - ", string_split_sn[i])
+            if (string_split_sn[i] == CMD_GET_SN.replace('\r','')) :
+                print(" bener : ", string_split_sn[i])
+                idx = i+2
+                break
+
         try:
             # filter data serial number from garbage character
-            if re.match("[A-Z0-9]+$", string_split_sn[2]):
+            if re.match("[A-Z0-9]+$", string_split_sn[idx]):
                 #self.data_query['sn'] = string_split_sn[2]
-                readSN = string_split_sn[2]
+                readSN = string_split_sn[idx]
             else:
                 readSN = "None"
         except Exception as identifier:
@@ -506,24 +546,36 @@ class Application(Frame):
                     # print(listSerialSN[j])
                     if(listSerialSN[j] != "None") : 
                         # print(self.sendDataToServer(listSerialSN[j], listSerialMAC[j]))
-                        self.write_to_textbox(self.insertString(listScanMac[i]) + self.sendDataToServer(listSerialSN[j], listSerialMAC[j]) , "success")
+                        respon = self.sendDataToServer(listSerialSN[j], listSerialMAC[j])
+                        data = json.loads(respon)
+                        status = data['status']
+                        msg = data['msg']
+                        self.write_to_textbox(self.insertString(listScanMac[i]) + " - " +msg , status)
+                        self.saveLog(listSerialSN[j], listSerialMAC[j], msg, status)
                     else :
-                        self.write_to_textbox(self.insertString(listScanMac[i]) , "error")                    
+                        self.write_to_textbox(self.insertString(listScanMac[i]) , "error")  
+                        self.saveLog(listSerialSN[j], listSerialMAC[j], "msg", "status")                
                 j = j+1
             if(isFound == False) :
-                self.write_to_textbox(self.insertString(listScanMac[i]) , "error") 
+                self.write_to_textbox(self.insertString(listScanMac[i]) , "error")
+                self.saveLog("sn", listScanMac[i], "msg", "status") 
             i = i+1
         
         self.setBarcodeRunning(False)
         self.clearListMac()
-        self.bStart["text"] = "Start"            
+        self.bStart["text"] = "Start"
+
+    def saveLog(self, SN, MAC, msg, status) :
+        out_file = open(LOG_PATH, 'a')
+        now = datetime.now()
+        current = now.strftime("%d/%m/%Y %H:%M:%S")
+        out_file.writelines(current + "\n")
     
     def sendDataToServer(self, SN, MAC):
         PARAMS={'username':USERNAME, 'pass':PASSWORD, 'sn':SN, 'mac':MAC}
         # sending post request and saving response as response object 
         x = requests.post(URL_LINK, data = PARAMS, timeout=30)
         return x.text
-
 
     def event_start1(self):
         message_string = ""
