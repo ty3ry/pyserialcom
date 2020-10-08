@@ -18,11 +18,12 @@ import ctypes
 import hashlib
 import configparser
 import platform
-import pyqrcode
-import png
+# import pyqrcode
+# import png
 # import pyzbar.pyzbar import decode
-import qrtools
+# import qrtools
 from scanner import Scanner
+
 import requests
 import json
 from datetime import datetime
@@ -54,10 +55,12 @@ PRODUCT_ID = 0x0103
 URL_LINK = "http://10.8.42.44/mola/scan/scanHKC"
 USERNAME = "snreader"
 PASSWORD = "HkcSn20"
+MODEL_NUMBER = "2K AI SmartTV"
 LOG_PATH = "./log.txt"
 
 class Application(Frame):
     def __init__(self, master=None):
+        self.defalutTimer = 10
         Frame.__init__(self, master)
         self.pack(fill=BOTH, expand=1)
         main_frame = Frame(master)
@@ -119,7 +122,22 @@ class Application(Frame):
         }
         
         self.isBarcodeRunning = False
+        self.is_running=False
+        self.count= 0
+        self.nPort = 0
         
+    def getNPort(self) :
+        return self.nPort
+    
+    def incrementPort(self) :
+        self.nPort = self.nPort + 1
+
+    def decrementPort(self) :
+        self.nPort = self.nPort - 1
+        
+    def resetCount(self) :
+        self.count = 0
+
     def getBarcodeRunning(self) :
         return self.isBarcodeRunning
     
@@ -210,6 +228,42 @@ class Application(Frame):
             self.lblDirectoryPath["text"] = self.directory_path           
         else:
             pass
+
+    def resetToDefault (self) :
+        self.stopit()
+        
+        self.ser1 = Serial()
+        self.ser2 = Serial()
+        self.ser3 = Serial()
+
+        self.comboPort1["values"] = self.scan_available_ports() #("com1", "com2", "com3", "com4", "com5")
+        self.comboPort2["values"] = self.scan_available_ports() #("com1", "com2", "com3", "com4", "com5")
+        self.comboPort3["values"] = self.scan_available_ports() #("com1", "com2", "com3", "com4", "com5")
+
+        self.count= 0
+        self.nPort = 0
+
+        self.btnOpenCom1["text"] = "Open"
+        self.comboPort1["state"] = "readonly"
+        self.uart1_open = False
+        self.btnOpenCom1["bg"] = "#6495ED"
+
+        self.btnOpenCom2["text"] = "Open"
+        self.comboPort2["state"] = "readonly"
+        self.uart2_open = False
+        self.btnOpenCom2["bg"] = "#6495ED"
+
+        self.btnOpenCom3["text"] = "Open"
+        self.comboPort3["state"] = "readonly"
+        self.uart3_open = False
+        self.btnOpenCom3["bg"] = "#6495ED"
+
+        self.txtTimer.delete("1.0", "end")
+        self.txtTimer.insert(1.0, self.defalutTimer)
+        
+        self.bStart["state"] = "disable"
+        self.clearBox()
+        tk.messagebox.showinfo(title="Information", message="Reset Done")
     
     def write_to_textbox(self, message, tag):
         self.OutputText.insert(tk.END,  message + "\n", tag)
@@ -254,6 +308,7 @@ class Application(Frame):
                 tk.messagebox.showerror(title="Error", message=message_string)
 
             if self.ser1.isOpen():
+                self.incrementPort()
                 self.btnOpenCom1["text"] = "Close"
                 self.comboPort1["state"] = "disable"
                 self.uart1_open = True
@@ -267,6 +322,7 @@ class Application(Frame):
                 print("Failed to close serial port : {}".format(err))
             
             if self.ser1.isOpen() == False:
+                self.decrementPort()
                 self.btnOpenCom1["text"] = "Open"
                 self.comboPort1["state"] = "readonly"
                 self.uart1_open = False
@@ -295,6 +351,7 @@ class Application(Frame):
                 tk.messagebox.showerror(title="Error", message=message_string)
 
             if self.ser2.isOpen():
+                self.incrementPort()
                 self.btnOpenCom2["text"] = "Close"
                 self.comboPort2["state"] = "disable"
                 self.uart2_open = True
@@ -308,6 +365,7 @@ class Application(Frame):
                 print("Failed to close serial port : {}".format(err))
             
             if self.ser2.isOpen() == False:
+                self.decrementPort()
                 self.btnOpenCom2["text"] = "Open"
                 self.comboPort2["state"] = "readonly"
                 self.uart2_open = False
@@ -336,6 +394,7 @@ class Application(Frame):
                 tk.messagebox.showerror(title="Error", message=message_string)
 
             if self.ser3.isOpen():
+                self.incrementPort()
                 self.btnOpenCom3["text"] = "Close"
                 self.comboPort3["state"] = "disable"
                 self.uart3_open = True
@@ -349,6 +408,7 @@ class Application(Frame):
                 print("Failed to close serial port : {}".format(err))
             
             if self.ser3.isOpen() == False:
+                self.decrementPort()
                 self.btnOpenCom3["text"] = "Open"
                 self.comboPort3["state"] = "readonly"
                 self.uart3_open = False
@@ -356,181 +416,190 @@ class Application(Frame):
                 # self.enable_uart_component(True)
 
     def event_start(self) :
+        self.stopit()
+        self.clearBox()
+        self.count = 0
         listSerialSN = []
         listSerialMAC = []
         readSN = None
         readMac = None 
 
-        if not self.ser1.isOpen():
-            message_string = "Open com Port 1 first !!"
-            tk.messagebox.showerror(title="Error", message=message_string)
+        if (self.getNPort() == 0 ) :
+            self.write_to_textbox("Please Open Port")
             return
+        # if not self.ser1.isOpen():
+        #     message_string = "Open com Port 1 first !!"
+        #     tk.messagebox.showerror(title="Error", message=message_string)
+        #     return
 
-        if not self.ser2.isOpen():
-            message_string = "Open com Port 2 first !!"
-            tk.messagebox.showerror(title="Error", message=message_string)
-            return
+        # if not self.ser2.isOpen():
+        #     message_string = "Open com Port 2 first !!"
+        #     tk.messagebox.showerror(title="Error", message=message_string)
+        #     return
         
-        if not self.ser3.isOpen():
-            message_string = "Open com Port 3 first !!"
-            tk.messagebox.showerror(title="Error", message=message_string)
-            return
+        # if not self.ser3.isOpen():
+        #     message_string = "Open com Port 3 first !!"
+        #     tk.messagebox.showerror(title="Error", message=message_string)
+        #     return
         
         self.bStart["text"] = "Process"
         self.setBtnStartEnable("disable")
 
         # === SERIAL 1 ====
         # get serial number
-        message = CMD_GET_SN.encode(encoding='ascii')
-        self.ser1.write(message)
-        time.sleep(1)
-        read_data_sn = self.ser1.read_all().decode(encoding='ascii')
-        print("SN 1 = " + read_data_sn)
+        if (self.ser1.isOpen()) :
+            message = CMD_GET_SN.encode(encoding='ascii')
+            self.ser1.write(message)
+            time.sleep(1)
+            read_data_sn = self.ser1.read_all().decode(encoding='ascii')
+            print("SN 1 = " + read_data_sn)
 
-        # get mac address
-        message = CMD_GET_MAC.encode(encoding='ascii')
-        self.ser1.write(message)
-        time.sleep(1)
-        read_data_mac = self.ser1.read_all().decode(encoding='ascii')
+            # get mac address
+            message = CMD_GET_MAC.encode(encoding='ascii')
+            self.ser1.write(message)
+            time.sleep(1)
+            read_data_mac = self.ser1.read_all().decode(encoding='ascii')
 
-        string_split_sn = read_data_sn.splitlines()
-        string_split_mac = read_data_mac.splitlines()
+            string_split_sn = read_data_sn.splitlines()
+            string_split_mac = read_data_mac.splitlines()
 
-        idx = 0
-        for i in range (len(string_split_sn)) :
-            print ("test : " , i , " - ", string_split_sn[i])
-            if (string_split_sn[i] == CMD_GET_SN.replace('\r','')) :
-                print(" bener : ", string_split_sn[i])
-                idx = i+2
-                break
+            idx = 0
+            for i in range (len(string_split_sn)) :
+                print ("test : " , i , " - ", string_split_sn[i])
+                if (string_split_sn[i] == CMD_GET_SN.replace('\r','')) :
+                    print(" bener : ", string_split_sn[i])
+                    idx = i+2
+                    break
 
-        try:
-            # filter data serial number from garbage character
-            if re.match("[A-Z0-9]+$", string_split_sn[idx]):
-                #self.data_query['sn'] = string_split_sn[2]
-                readSN = string_split_sn[idx]
-            else:
+            try:
+                # filter data serial number from garbage character
+                if re.match("[A-Z0-9]+$", string_split_sn[idx]):
+                    #self.data_query['sn'] = string_split_sn[2]
+                    readSN = string_split_sn[idx]
+                else:
+                    readSN = "None"
+            except Exception as identifier:
                 readSN = "None"
-        except Exception as identifier:
-            readSN = "None"
-        
-        print("SN 1 : " + readSN)
-        listSerialSN.append(readSN)
+            
+            print("SN 1 : " + readSN)
+            listSerialSN.append(readSN)
 
-        try:
-            # filter data mac address from garbage character
-            if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_mac[4].lower()):
-                #self.data_query['mac'] = string_split_mac[4]
-                readMac = string_split_mac[4].upper()
-            else:
+            try:
+                # filter data mac address from garbage character
+                if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_mac[4].lower()):
+                    #self.data_query['mac'] = string_split_mac[4]
+                    readMac = string_split_mac[4].upper()
+                else:
+                    readMac = "None"
+            except Exception as identifier:
                 readMac = "None"
-        except Exception as identifier:
-            readMac = "None"
-        
-        print("MAC 1 : " + readMac)
-        listSerialMAC.append(readMac)
+            
+            print("MAC 1 : " + readMac)
+            listSerialMAC.append(readMac)
         
         # === SERIAL 2 ====
         # get serial number
-        message = CMD_GET_SN.encode(encoding='ascii')
-        self.ser2.write(message)
-        time.sleep(1)
-        read_data_sn = self.ser2.read_all().decode(encoding='ascii')
-        print("SN 2 = " + read_data_sn)
+        if (self.ser2.isOpen()) :
+            message = CMD_GET_SN.encode(encoding='ascii')
+            self.ser2.write(message)
+            time.sleep(1)
+            read_data_sn = self.ser2.read_all().decode(encoding='ascii')
+            print("SN 2 = " + read_data_sn)
 
-        # get mac address
-        message = CMD_GET_MAC.encode(encoding='ascii')
-        self.ser2.write(message)
-        time.sleep(1)
-        read_data_mac = self.ser2.read_all().decode(encoding='ascii')
+            # get mac address
+            message = CMD_GET_MAC.encode(encoding='ascii')
+            self.ser2.write(message)
+            time.sleep(1)
+            read_data_mac = self.ser2.read_all().decode(encoding='ascii')
 
-        string_split_sn = read_data_sn.splitlines()
-        string_split_mac = read_data_mac.splitlines()
+            string_split_sn = read_data_sn.splitlines()
+            string_split_mac = read_data_mac.splitlines()
 
-        idx = 0
-        for i in range (len(string_split_sn)) :
-            print ("test : " , i , " - ", string_split_sn[i])
-            if (string_split_sn[i] == CMD_GET_SN.replace('\r','')) :
-                print(" bener : ", string_split_sn[i])
-                idx = i+2
-                break
+            idx = 0
+            for i in range (len(string_split_sn)) :
+                print ("test : " , i , " - ", string_split_sn[i])
+                if (string_split_sn[i] == CMD_GET_SN.replace('\r','')) :
+                    print(" bener : ", string_split_sn[i])
+                    idx = i+2
+                    break
 
-        try:
-            # filter data serial number from garbage character
-            if re.match("[A-Z0-9]+$", string_split_sn[idx]):
-                #self.data_query['sn'] = string_split_sn[2]
-                readSN = string_split_sn[idx]
-            else:
+            try:
+                # filter data serial number from garbage character
+                if re.match("[A-Z0-9]+$", string_split_sn[idx]):
+                    #self.data_query['sn'] = string_split_sn[2]
+                    readSN = string_split_sn[idx]
+                else:
+                    readSN = "None"
+            except Exception as identifier:
                 readSN = "None"
-        except Exception as identifier:
-            readSN = "None"
-        
-        print("SN 2 : " + readSN)
-        listSerialSN.append(readSN)
+            
+            print("SN 2 : " + readSN)
+            listSerialSN.append(readSN)
 
-        try:
-            # filter data mac address from garbage character
-            if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_mac[4].lower()):
-                #self.data_query['mac'] = string_split_mac[4]
-                readMac = string_split_mac[4].upper()
-            else:
+            try:
+                # filter data mac address from garbage character
+                if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_mac[4].lower()):
+                    #self.data_query['mac'] = string_split_mac[4]
+                    readMac = string_split_mac[4].upper()
+                else:
+                    readMac = "None"
+            except Exception as identifier:
                 readMac = "None"
-        except Exception as identifier:
-            readMac = "None"
-        
-        print("MAC 2 : " + readMac)
-        listSerialMAC.append(readMac)
+            
+            print("MAC 2 : " + readMac)
+            listSerialMAC.append(readMac)
 
         # === SERIAL 3 ====
         # get serial number
-        message = CMD_GET_SN.encode(encoding='ascii')
-        self.ser3.write(message)
-        time.sleep(1)
-        read_data_sn = self.ser3.read_all().decode(encoding='ascii')
-        print("SN 3 = " + read_data_sn)
+        if (self.ser3.isOpen()) :
+            message = CMD_GET_SN.encode(encoding='ascii')
+            self.ser3.write(message)
+            time.sleep(1)
+            read_data_sn = self.ser3.read_all().decode(encoding='ascii')
+            print("SN 3 = " + read_data_sn)
 
-        # get mac address
-        message = CMD_GET_MAC.encode(encoding='ascii')
-        self.ser3.write(message)
-        time.sleep(1)
-        read_data_mac = self.ser3.read_all().decode(encoding='ascii')
+            # get mac address
+            message = CMD_GET_MAC.encode(encoding='ascii')
+            self.ser3.write(message)
+            time.sleep(1)
+            read_data_mac = self.ser3.read_all().decode(encoding='ascii')
 
-        string_split_sn = read_data_sn.splitlines()
-        string_split_mac = read_data_mac.splitlines()
+            string_split_sn = read_data_sn.splitlines()
+            string_split_mac = read_data_mac.splitlines()
 
-        idx = 0
-        for i in range (len(string_split_sn)) :
-            print ("test : " , i , " - ", string_split_sn[i])
-            if (string_split_sn[i] == CMD_GET_SN.replace('\r','')) :
-                print(" bener : ", string_split_sn[i])
-                idx = i+2
-                break
+            idx = 0
+            for i in range (len(string_split_sn)) :
+                print ("test : " , i , " - ", string_split_sn[i])
+                if (string_split_sn[i] == CMD_GET_SN.replace('\r','')) :
+                    print(" bener : ", string_split_sn[i])
+                    idx = i+2
+                    break
 
-        try:
-            # filter data serial number from garbage character
-            if re.match("[A-Z0-9]+$", string_split_sn[idx]):
-                #self.data_query['sn'] = string_split_sn[2]
-                readSN = string_split_sn[idx]
-            else:
+            try:
+                # filter data serial number from garbage character
+                if re.match("[A-Z0-9]+$", string_split_sn[idx]):
+                    #self.data_query['sn'] = string_split_sn[2]
+                    readSN = string_split_sn[idx]
+                else:
+                    readSN = "None"
+            except Exception as identifier:
                 readSN = "None"
-        except Exception as identifier:
-            readSN = "None"
-        
-        print("SN 3 : " + readSN)
-        listSerialSN.append(readSN)
+            
+            print("SN 3 : " + readSN)
+            listSerialSN.append(readSN)
 
-        try:
-            # filter data mac address from garbage character
-            if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_mac[4].lower()):
-                #self.data_query['mac'] = string_split_mac[4]
-                readMac = string_split_mac[4].upper()
-            else:
+            try:
+                # filter data mac address from garbage character
+                if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_mac[4].lower()):
+                    #self.data_query['mac'] = string_split_mac[4]
+                    readMac = string_split_mac[4].upper()
+                else:
+                    readMac = "None"
+            except Exception as identifier:
                 readMac = "None"
-        except Exception as identifier:
-            readMac = "None"
-        
-        print("MAC 3 : " + readMac)
-        listSerialMAC.append(readMac)
+            
+            print("MAC 3 : " + readMac)
+            listSerialMAC.append(readMac)
 
         #check read listScanMac & read Serial
         
@@ -550,7 +619,7 @@ class Application(Frame):
                         data = json.loads(respon)
                         status = data['status']
                         msg = data['msg']
-                        self.write_to_textbox(self.insertString(listScanMac[i]) + " - " +msg , status)
+                        self.write_to_textbox(self.insertString(listScanMac[i]) + " - " +msg , "success")
                         self.saveLog(listSerialSN[j], listSerialMAC[j], msg, status)
                     else :
                         self.write_to_textbox(self.insertString(listScanMac[i]) , "error")  
@@ -561,7 +630,7 @@ class Application(Frame):
                 self.saveLog("sn", listScanMac[i], "msg", "status") 
             i = i+1
         
-        self.setBarcodeRunning(False)
+        # self.setBarcodeRunning(False)
         self.clearListMac()
         self.bStart["text"] = "Start"
 
@@ -570,6 +639,30 @@ class Application(Frame):
         now = datetime.now()
         current = now.strftime("%d/%m/%Y %H:%M:%S")
         out_file.writelines(current + "\n")
+
+    def increment_counter(self):
+        nTimer = self.defalutTimer
+        try:
+            nTimer = int(self.txtTimer.get(1.0, "end-1c"))
+        except ValueError as err:
+            pass 
+        
+        if self.is_running:  ## stopit not called
+             c=self.count + 1
+             self.count = c
+             if c < nTimer:
+                 self.after(1000, self.increment_counter)  ## every second
+             else:
+                 self.is_running=False
+                 self.write_to_textbox("Jangan Lupa Klik Start", "")
+
+    def stopit(self):
+        self.is_running = False
+
+    def startit(self):
+        if not self.is_running:  ## avoid 2 button pushes
+            self.is_running=True
+            self.increment_counter()
     
     def sendDataToServer(self, SN, MAC):
         PARAMS={'username':USERNAME, 'pass':PASSWORD, 'sn':SN, 'mac':MAC}
@@ -685,6 +778,12 @@ class Application(Frame):
         self.lblDirectoryPath = Label(self.frame1, text="data", width=30, font=smallLabel, anchor="w")
         self.lblDirectoryPath.grid(row=self.row_count, column=1, sticky=W + E, columnspan=4, pady=3)
 
+        #reset
+        self.btnReset = Button(self.frame1, text="Reset", width=12, font=ftButton, bg="#6495ED")
+        self.btnReset.grid(row=0, column=2, sticky=W + E + N + S , columnspan=4, pady=3)
+        self.btnReset["command"] = self.resetToDefault
+        # self.bBrowseFile["state"] = "disable"
+
         self.row_count = 1
         
         # space -----
@@ -793,12 +892,21 @@ class Application(Frame):
         self.btnOpenCom3["command"] = self.open_com_event3
         self.row_count = self.row_count + 1
 
+        # Timer
+        self.lblTimer = Label(self.frame1, text="Timer", width=30, font=smallLabel, anchor="w")
+        self.lblTimer.grid(row=self.row_count, column=0, sticky=W + E, columnspan=4, pady=3)
+
+        self.txtTimer = Text(self.frame1, width=17, height=1 )
+        self.txtTimer.grid(row=self.row_count, column=1, sticky=W + E, columnspan=1, pady=3)
+        self.txtTimer.insert(1.0, self.defalutTimer)
+        self.row_count = self.row_count + 1
+
         # space -----
         self.space = Label(self.frame1, text="", width=30, font=smallLabel, anchor="w")
         self.space.grid(row=self.row_count, column=0, sticky=W + E, columnspan=2)
 
         self.row_count = self.row_count + 1
-
+        
         # space -----
         self.space = Label(self.frame1, text="", width=30, font=smallLabel, anchor="w")
         self.space.grid(row=self.row_count, column=0, sticky=W + E, columnspan=2)
@@ -878,16 +986,19 @@ if __name__ == "__main__":
         
     while True:
         app.update()
-        if(app.getBarcodeRunning() == False) :
-            value = scans.startScan()
-            if (value != None) :
-                if(app.getListSize() == 0) :
-                    app.clearBox()
-                if (app.getListSize() < 3) :
-                    app.insertMac(value)
-                    app.write_to_textbox("Scan : " + app.insertString(value), "")
-                if (app.getListSize() == 3) :
+        # if(app.getBarcodeRunning() == False) :
+        value = scans.startScan()
+        print(value)
+        if (value != None) :
+            if(app.getListSize() == 0) :
+                app.clearBox()
+            if (app.getListSize() < app.getNPort()) :
+                app.insertMac(value)
+                app.write_to_textbox("Scan : " + app.insertString(value), "")
+            if (app.getNPort() > 0 ) :
+                if (app.getListSize() == app.getNPort()) :
                     app.setBtnStartEnable("normal")
-                    app.setBarcodeRunning(True)
+                    # app.setBarcodeRunning(True)
+                    app.startit()
                 
 
