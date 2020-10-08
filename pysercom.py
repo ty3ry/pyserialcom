@@ -637,7 +637,10 @@ class Application(Frame):
     def saveLog(self, SN, MAC, msg, status) :
         out_file = open(LOG_PATH, 'a')
         now = datetime.now()
+        MAC = MAC.replace('\n','')
+        MAC = self.insertString(MAC)
         current = now.strftime("%d/%m/%Y %H:%M:%S")
+        current = current + " "+ SN + " "+ MAC + " "+ msg + " "+ status
         out_file.writelines(current + "\n")
 
     def increment_counter(self):
