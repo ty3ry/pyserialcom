@@ -132,6 +132,11 @@ class Scanner():
             return ''
         return conv_table[ch][shift]
 
+    def checkDevice(self, vendorID, productID) :
+        self.dev = usb.core.find(idVendor=vendorID, idProduct=productID)
+        if self.dev is None :
+            return False
+
     def findDevice(self, vendorID, productID) :
         # Find our device using the VID (Vendor ID) and PID (Product ID)
         self.dev = usb.core.find(idVendor=vendorID, idProduct=productID)

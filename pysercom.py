@@ -262,6 +262,7 @@ class Application(Frame):
         self.txtTimer.insert(1.0, self.defalutTimer)
         
         self.bStart["state"] = "disable"
+        self.bStart["text"] = "Start"
         self.clearBox()
         tk.messagebox.showinfo(title="Information", message="Reset Done")
     
@@ -270,6 +271,9 @@ class Application(Frame):
     
     def clearBox(self):
         self.OutputText.delete("1.0", "end")
+
+    def deviceNotConnect(self) :
+        tk.messagebox.showerror(title="Error", message="Barcode Unplug")
 
     def enable_uart_component(self, state):
         if state == True:
@@ -423,6 +427,9 @@ class Application(Frame):
         listSerialMAC = []
         readSN = None
         readMac = None 
+        message = None
+        read_data_sn = None
+        read_data_mac = None
 
         if (self.getNPort() == 0 ) :
             self.write_to_textbox("Please Open Port")
@@ -446,19 +453,25 @@ class Application(Frame):
         self.setBtnStartEnable("disable")
 
         # === SERIAL 1 ====
-        # get serial number
         if (self.ser1.isOpen()) :
-            message = CMD_GET_SN.encode(encoding='ascii')
-            self.ser1.write(message)
-            time.sleep(1)
-            read_data_sn = self.ser1.read_all().decode(encoding='ascii')
-            print("SN 1 = " + read_data_sn)
-
-            # get mac address
-            message = CMD_GET_MAC.encode(encoding='ascii')
-            self.ser1.write(message)
-            time.sleep(1)
-            read_data_mac = self.ser1.read_all().decode(encoding='ascii')
+            try:
+                # get serial number
+                message = CMD_GET_SN.encode(encoding='ascii')
+                self.ser1.write(message)
+                time.sleep(1)
+                read_data_sn = self.ser1.read_all().decode(encoding='ascii')
+                print("SN 1 = " + read_data_sn)
+            except Exception as identifier:
+                readSN = "None"
+            
+            try:
+                # get mac address
+                message = CMD_GET_MAC.encode(encoding='ascii')
+                self.ser1.write(message)
+                time.sleep(1)
+                read_data_mac = self.ser1.read_all().decode(encoding='ascii')
+            except Exception as identifier:
+                readMac = "None"
 
             string_split_sn = read_data_sn.splitlines()
             string_split_mac = read_data_mac.splitlines()
@@ -500,17 +513,24 @@ class Application(Frame):
         # === SERIAL 2 ====
         # get serial number
         if (self.ser2.isOpen()) :
-            message = CMD_GET_SN.encode(encoding='ascii')
-            self.ser2.write(message)
-            time.sleep(1)
-            read_data_sn = self.ser2.read_all().decode(encoding='ascii')
-            print("SN 2 = " + read_data_sn)
-
-            # get mac address
-            message = CMD_GET_MAC.encode(encoding='ascii')
-            self.ser2.write(message)
-            time.sleep(1)
-            read_data_mac = self.ser2.read_all().decode(encoding='ascii')
+            try:
+                message = CMD_GET_SN.encode(encoding='ascii')
+                self.ser2.write(message)
+                time.sleep(1)
+                read_data_sn = self.ser2.read_all().decode(encoding='ascii')
+                print("SN 2 = " + read_data_sn)
+            except Exception as identifier:
+                readSN = "None"
+            
+            try:
+                # get mac address
+                message = CMD_GET_MAC.encode(encoding='ascii')
+                self.ser2.write(message)
+                time.sleep(1)
+                read_data_mac = self.ser2.read_all().decode(encoding='ascii')
+            except Exception as identifier:
+                readMac = "None"
+            
 
             string_split_sn = read_data_sn.splitlines()
             string_split_mac = read_data_mac.splitlines()
@@ -550,20 +570,26 @@ class Application(Frame):
             listSerialMAC.append(readMac)
 
         # === SERIAL 3 ====
-        # get serial number
         if (self.ser3.isOpen()) :
-            message = CMD_GET_SN.encode(encoding='ascii')
-            self.ser3.write(message)
-            time.sleep(1)
-            read_data_sn = self.ser3.read_all().decode(encoding='ascii')
-            print("SN 3 = " + read_data_sn)
-
-            # get mac address
-            message = CMD_GET_MAC.encode(encoding='ascii')
-            self.ser3.write(message)
-            time.sleep(1)
-            read_data_mac = self.ser3.read_all().decode(encoding='ascii')
-
+            try:
+                # get serial number
+                message = CMD_GET_SN.encode(encoding='ascii')
+                self.ser3.write(message)
+                time.sleep(1)
+                read_data_sn = self.ser3.read_all().decode(encoding='ascii')
+                print("SN 3 = " + read_data_sn)
+            except Exception as identifier:
+                readSN = "None"
+            
+            try:
+                # get mac address
+                message = CMD_GET_MAC.encode(encoding='ascii')
+                self.ser3.write(message)
+                time.sleep(1)
+                read_data_mac = self.ser3.read_all().decode(encoding='ascii')
+            except Exception as identifier:
+                readMac = "None"
+            
             string_split_sn = read_data_sn.splitlines()
             string_split_mac = read_data_mac.splitlines()
 
@@ -615,7 +641,13 @@ class Application(Frame):
                     # print(listSerialSN[j])
                     if(listSerialSN[j] != "None") : 
                         # print(self.sendDataToServer(listSerialSN[j], listSerialMAC[j]))
-                        respon = self.sendDataToServer(listSerialSN[j], listSerialMAC[j])
+                        respon = None
+                        try:
+                            respon = self.sendDataToServer(listSerialSN[j], listSerialMAC[j])
+                        except Exception as identifier:
+                            self.write_to_textbox("Tidak Bisa connect ke Jaringan" , "")
+                            break
+                        
                         data = json.loads(respon)
                         status = data['status']
                         msg = data['msg']
@@ -627,7 +659,7 @@ class Application(Frame):
                 j = j+1
             if(isFound == False) :
                 self.write_to_textbox(self.insertString(listScanMac[i]) , "error")
-                self.saveLog("sn", listScanMac[i], "msg", "status") 
+                self.saveLog("sn", self.insertString(x), "msg", "status") 
             i = i+1
         
         # self.setBarcodeRunning(False)
@@ -637,8 +669,6 @@ class Application(Frame):
     def saveLog(self, SN, MAC, msg, status) :
         out_file = open(LOG_PATH, 'a')
         now = datetime.now()
-        MAC = MAC.replace('\n','')
-        MAC = self.insertString(MAC)
         current = now.strftime("%d/%m/%Y %H:%M:%S")
         current = current + " "+ SN + " "+ MAC + " "+ msg + " "+ status
         out_file.writelines(current + "\n")
@@ -946,6 +976,13 @@ class Application(Frame):
         t = iter(string)
         temp = ':'.join(a+b for a,b in zip(t, t))
         return temp
+
+    def connectToBarcode(self, data) :
+        try:
+            scans.findDevice(VENDOR_ID, PRODUCT_ID)
+        except Exception as identifier:
+            tk.messagebox.showerror(title="Barcode Scanner Not Found", message=identifier)
+            sys.exit(1)
        
 if __name__ == "__main__":
 
@@ -981,15 +1018,16 @@ if __name__ == "__main__":
 
     #app.mainloop()
     scans = Scanner()
-    try:
-        scans.findDevice(VENDOR_ID, PRODUCT_ID)
-    except Exception as identifier:
-        tk.messagebox.showerror(title="Barcode Scanner Not Found", message=identifier)
-        sys.exit(1)
+    app.connectToBarcode(scans)
         
     while True:
         app.update()
         # if(app.getBarcodeRunning() == False) :
+        isDeviceConnect = scans.checkDevice(VENDOR_ID, PRODUCT_ID)
+        if(isDeviceConnect == False) :
+            app.deviceNotConnect()
+            break
+
         value = scans.startScan()
         print(value)
         if (value != None) :
