@@ -55,7 +55,7 @@ PRODUCT_ID = 0x0103
 URL_LINK = "http://10.8.42.44/mola/scan/scanHKC"
 USERNAME = "snreader"
 PASSWORD = "HkcSn20"
-MODEL_NUMBER = "2K AI SmartTV"
+MODEL_NUMBER = "2K AI Smart TV"
 LOG_PATH = "./log.txt"
 
 class Application(Frame):
@@ -232,6 +232,7 @@ class Application(Frame):
     def resetToDefault (self) :
         self.stopit()
         
+        self.clearListMac()
         self.ser1 = Serial()
         self.ser2 = Serial()
         self.ser3 = Serial()
@@ -698,7 +699,7 @@ class Application(Frame):
             self.increment_counter()
     
     def sendDataToServer(self, SN, MAC):
-        PARAMS={'username':USERNAME, 'pass':PASSWORD, 'sn':SN, 'mac':MAC}
+        PARAMS={'username':USERNAME, 'pass':PASSWORD, 'sn':SN, 'mac':MAC.lower(), 'modelNumber' : MODEL_NUMBER}
         # sending post request and saving response as response object 
         x = requests.post(URL_LINK, data = PARAMS, timeout=30)
         return x.text
