@@ -23,7 +23,10 @@ from serial import PARITY_EVEN, PARITY_MARK, PARITY_NAMES, PARITY_NONE, PARITY_O
 from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE , STOPBITS_TWO
 from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 import glob
-
+from datetime import datetime
+import time
+import requests
+import json
 
 __author__ = "Cosmas Eric. s"
 __copyright__ = "Copyright 2020, Serial communication project"
@@ -38,6 +41,9 @@ __status__ = "Internal Test Beta"
 CMD_GET_SN = "getprop ro.serialno\r"
 #CMD_GET_MAC = "ip addr show wlan0  | grep 'link/ether '| cut -d' ' -f6\r"
 CMD_GET_MAC = "ip addr show | grep 'link/ether' | cut -d' ' -f6\r"
+LOG_PATH = "./log.txt"
+
+URL_LINK = "http://10.8.42.44/mola/scan/readHKC"
 
 class Application(Frame):
     def __init__(self, master=None):
@@ -152,9 +158,8 @@ class Application(Frame):
         else:
             pass
     
-    def write_to_textbox(self, message):
-        self.OutputText.insert(tk.END, f"[{self.rx_count}] " + message)
-        self.rx_count = self.rx_count + 1
+    def write_to_textbox(self, message, tag):
+        self.OutputText.insert(tk.END, message, tag)
 
     def enable_uart_component(self, state):
         if state == True:
@@ -245,6 +250,10 @@ class Application(Frame):
 
     def event_start(self):
         message_string = ""
+        string_split_sn = ""
+        string_split_mac = ""
+        readSN = "None"
+        readMac = "None"
 
         if not self.directory_path:
             # message_string = "Load directory path first!"
@@ -267,66 +276,76 @@ class Application(Frame):
             message_string = "Open com first !!"
             tk.messagebox.showerror(title="Error", message=message_string)
             return
-
-        # get serial number
-        message = CMD_GET_SN.encode(encoding='ascii')
-        self.ser.write(message)
-        time.sleep(.2)
-        read_data_sn = self.ser.read_all().decode(encoding='ascii')
-
-        # get mac address
-        message = CMD_GET_MAC.encode(encoding='ascii')
-        self.ser.write(message)
-        time.sleep(.2)
-        read_data_mac = self.ser.read_all().decode(encoding='ascii')
-
-        # split data
-        string_split_sn = read_data_sn.splitlines()
-        string_split_mac = read_data_mac.splitlines()
-        print(string_split_sn)
-        print(string_split_mac)
-
-        print("Serial number : {}".format(string_split_sn[2]))
-
-        # filter data serial number from garbage character
-        if re.match("[A-Z0-9]+$", string_split_sn[2]):
-            self.data_query['sn'] = string_split_sn[2]
-            tk.messagebox.showinfo(
-                title="Status",
-                message="SN : {}".format(self.data_query['sn'])
-            )
-        else:
-            print("serial not valid")
-            tk.messagebox.showerror(
-                title="Error",
-                message="SN data not valid"
-            )
-            return
-
-        # filter data mac address from garbage character
-        if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_mac[4].lower()):
-            self.data_query['mac'] = string_split_mac[4]
-            tk.messagebox.showinfo(
-                title="Status",
-                message="MAC : {}".format(self.data_query['mac'])
-            )
-        else:
-            print("MAC Address not valid")
-            tk.messagebox.showerror(
-                title="Error",
-                message="MAC data not valid"
-            )
-            return
         
-        self.write_to_textbox(self.data_query['sn'] + " " +  self.data_query['mac'] + "\n")
-        
-        # try to create file
         try:
-            out_file = open(self.output_file, 'a')
-            out_file.writelines(self.data_query['sn'] + " " + self.data_query['mac'] + "\n")
-            out_file.close()
-        except IOError as err:
-            print("Err : {}".format(err))
+            # get serial number
+            message = CMD_GET_SN.encode(encoding='ascii')
+            self.ser.write(message)
+            time.sleep(1)
+            read_data_sn = self.ser.read_all().decode(encoding='ascii')
+            string_split_sn = read_data_sn.splitlines()
+            print("SN 1 = " + string_split_sn)
+        except Exception as identifier:
+            readSN = "None"
+        
+        try:
+            # get mac address
+            message = CMD_GET_MAC.encode(encoding='ascii')
+            self.ser.write(message)
+            time.sleep(1)
+            read_data_mac = self.ser.read_all().decode(encoding='ascii')
+            string_split_mac = read_data_mac.splitlines()
+        except Exception as identifier:
+            readMac = "None"
+
+        idx = 0
+        try :
+            for i in range (len(string_split_sn)) :
+                print ("test : " , i , " - ", string_split_sn[i])
+                if (string_split_sn[i] == CMD_GET_SN.replace('\r','')) :
+                    print(" bener : ", string_split_sn[i])
+                    idx = i+2
+                    break
+        except Exception as identifier:
+            readSN = "None"    
+
+        try:
+            # filter data serial number from garbage character
+            if re.match("[A-Z0-9]+$", string_split_sn[idx]):
+                #self.data_query['sn'] = string_split_sn[2]
+                readSN = string_split_sn[idx]
+            else:
+                readSN = "None"
+        except Exception as identifier:
+            readSN = "None"
+        
+        print("SN nya : " + readSN)
+
+        try:
+            # filter data mac address from garbage character
+            if re.match("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", string_split_mac[4].lower()):
+                #self.data_query['mac'] = string_split_mac[4]
+                readMac = string_split_mac[4].upper()
+            else:
+                readMac = "None"
+        except Exception as identifier:
+            readMac = "None"
+        
+        print("MAC nya : " + readMac)
+        
+        if(readSN == "None" or readMac == "None") :
+            self.event_start()
+            return
+        
+        readSN = "56FFEDCD21"
+        readMac = "DC:BD:7A:62:5F:25"
+        respon = self.sendDataToServer(readSN, readMac)
+        data = json.loads(respon)
+        status = data['status']
+        sn = data['sn']
+        mac = data['mac']
+        self.write_to_textbox(readSN + " - "+readMac + " = "+status, status)
+        self.saveLog(readSN, readMac, status)
         
 
     def createWidgets(self, main_frame):
@@ -482,8 +501,10 @@ class Application(Frame):
         frameRecvSon.grid(row = 2, column =1)
         scrollbarRecv = tk.Scrollbar(frameRecvSon)
         scrollbarRecv.pack(side = tk.RIGHT, fill = tk.Y)
-        self.OutputText = tk.Text(frameRecvSon, wrap = tk.WORD, width = 42, height = 10, yscrollcommand = scrollbarRecv.set)
+        self.OutputText = tk.Text(frameRecvSon, wrap = tk.WORD, width = 42, height = 10, yscrollcommand = scrollbarRecv.set, font=("Helvetica", 18))
         self.OutputText.pack()
+        self.OutputText.tag_config('NOK', background="yellow", foreground="red")
+        self.OutputText.tag_config('OK', foreground="green")
 
         self.row_count = self.row_count + 1
 
@@ -496,6 +517,18 @@ class Application(Frame):
         self.bStart.grid(row=self.row_count, column=0, sticky=W + E + N + S, columnspan=4)
         self.bStart["command"] = self.event_start
 
+    def sendDataToServer(self, SN, MAC):
+        PARAMS={'sn':SN, 'mac':MAC.lower()}
+        # sending post request and saving response as response object 
+        x = requests.post(URL_LINK, data = PARAMS, timeout=30)
+        return x.text
+
+    def saveLog(self, SN, MAC, status) :
+        out_file = open(LOG_PATH, 'a')
+        now = datetime.now()
+        current = now.strftime("%d/%m/%Y %H:%M:%S")
+        current = current + " "+ SN + " "+MAC + " "+status
+        out_file.writelines(current + "\n")
        
 if __name__ == "__main__":
 
