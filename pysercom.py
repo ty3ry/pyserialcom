@@ -248,7 +248,11 @@ class Application(Frame):
                 self.lblComStatusVal["text"] = "Closed"
                 self.enable_uart_component(True)
 
+    def clearBox(self):
+        self.OutputText.delete("1.0", "end")
+
     def event_start(self):
+        self.clearBox()
         message_string = ""
         string_split_sn = ""
         string_split_mac = ""
@@ -337,8 +341,6 @@ class Application(Frame):
             self.event_start()
             return
         
-        readSN = "56FFEDCD21"
-        readMac = "DC:BD:7A:62:5F:25"
         respon = self.sendDataToServer(readSN, readMac)
         data = json.loads(respon)
         status = data['status']
