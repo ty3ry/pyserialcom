@@ -39,7 +39,7 @@ __author__ = "Cosmas Eric. s"
 __copyright__ = "Copyright 2020, Serial communication project"
 
 __license__ = "GPL"
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 __maintainer__ = "Cosmas Eric "
 __email__ = "cosmas.eric.septian@polytron.co.id"
 __status__ = "Internal Test Beta"
@@ -653,6 +653,7 @@ class Application(Frame):
                     if(listSerialSN[j] != "None") : 
                         # print(self.sendDataToServer(listSerialSN[j], listSerialMAC[j]))
                         respon = None
+                        
                         try:
                             respon = self.sendDataToServer(listSerialSN[j], listSerialMAC[j])
                         except Exception as identifier:
@@ -662,7 +663,10 @@ class Application(Frame):
                         data = json.loads(respon)
                         status = data['status']
                         msg = data['msg']
-                        self.write_to_textbox(self.insertString(listScanMac[i]) + " - " +msg , "success")
+                        if (msg == "MAC tidak valid" or msg == "SN tidak valid") :
+                            self.write_to_textbox(self.insertString(listScanMac[i]) + " - " +msg , "error")
+                        else :
+                            self.write_to_textbox(self.insertString(listScanMac[i]) + " - " +msg , "success")
                         self.saveLog(listSerialSN[j], listSerialMAC[j], msg, status)
                     else :
                         # self.write_to_textbox(self.insertString(listScanMac[i]) , "error")  
@@ -1058,23 +1062,19 @@ if __name__ == "__main__":
         value = scans.startScan()
         print(value)
         if (value != None) :
-            #cek jika masih proses read SN MAC
-            if(app.getListSize() > 0) :
-                print("masih proses read SN MAC")
+            if(app.getListSize() == 0) :
+                app.clearBox()
+            if (app.getNPort() > 0) :
+                app.insertMac(value)
+                #app.write_to_textbox("Scan : " + app.insertString(value), "")
+                app.scanMac(app.insertString(value))
             else :
-                if(app.getListSize() == 0) :
-                    app.clearBox()
-                if (app.getNPort() > 0) :
-                    app.insertMac(value)
-                    #app.write_to_textbox("Scan : " + app.insertString(value), "")
-                    app.scanMac(app.insertString(value))
-                else :
-                    app.write_to_textbox("Please Open Port First" , "")
-                if (app.getNPort() > 0 ) :
-                    if (app.getListSize() == app.getNPort()) :
-                        app.setBtnStartEnable("normal")
-                        # app.setBarcodeRunning(True)
-                        app.startit()
+                app.write_to_textbox("Please Open Port First" , "")
+            if (app.getNPort() > 0 ) :
+                if (app.getListSize() == app.getNPort()) :
+                    app.setBtnStartEnable("normal")
+                    # app.setBarcodeRunning(True)
+                    app.startit()
         else :
             print("size :  ", app.getListSize())
             if(app.getListSize() > 0) :
